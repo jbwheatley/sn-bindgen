@@ -31,7 +31,7 @@ def alias(model: Def.Alias, line: Appender)(using
 
   renderComment(line, model.meta)
   line(s"${modifier}type ${model.name} = ${scalaType(underlyingType)}")
-  line(s"object ${sanitiseBeforeColon(model.name)}: ")
+  line(s"object ${sanitiseBeforeColon(model.name)} {")
   nest {
     model.underlying match
       case Reference(Name.BuiltIn(name)) =>
@@ -50,15 +50,17 @@ def alias(model: Def.Alias, line: Appender)(using
       line(
         s"inline def apply(inline o: ${scalaType(underlyingType)}): ${model.name} = o"
       )
-      line(s"extension (v: ${model.name})")
+      line(s"extension (v: ${model.name}) {")
       nest {
         line(s"inline def value: ${scalaType(underlyingType)} = v")
         if isFunctionPointer then
           line(s"inline def toPtr: $voidPtr = CFuncPtr.toPtr(v)")
         end if
       }
+      line("}")
     end if
   }
+  line("}")
 
   Exported.Yes(model.name)
 

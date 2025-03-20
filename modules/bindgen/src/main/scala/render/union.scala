@@ -26,7 +26,7 @@ def union(model: Def.Union, line: Appender)(using Config)(using
 
   renderComment(line, model.meta)
   line(s"opaque type $unionName = $tpe")
-  line(s"object ${sanitiseBeforeColon(unionName.value)}:")
+  line(s"object ${sanitiseBeforeColon(unionName.value)} {")
   nest {
     model.anonymous.foreach {
       case s: Def.Struct =>
@@ -40,11 +40,12 @@ def union(model: Def.Union, line: Appender)(using Config)(using
     line(tag)
 
     if model.fields.nonEmpty then
-      line(s"def apply()(using Zone): Ptr[$unionName] = ")
+      line(s"def apply()(using Zone): Ptr[$unionName] = {")
       nest {
         line(s"val ___ptr = alloc[$unionName](1)")
         line("___ptr")
       }
+      line("}")
       model.fields.foreach { case (fieldName, fieldType) =>
         val typ = scalaType(fieldType)
         val getterName = getter(fieldName.value)
@@ -52,7 +53,7 @@ def union(model: Def.Union, line: Appender)(using Config)(using
         // It's important we don't use the escape(...) function here
         line(s"@scala.annotation.targetName(\"apply_${fieldName.value}\")")
         line(
-          s"def apply($getterName: $typ)(using Zone): Ptr[$unionName] ="
+          s"def apply($getterName: $typ)(using Zone): Ptr[$unionName] = {"
         )
         nest {
           line(s"val ___ptr = alloc[$unionName](1)")
@@ -62,8 +63,9 @@ def union(model: Def.Union, line: Appender)(using Config)(using
           )
           line("___ptr")
         }
+        line("}")
       }
-      line(s"extension (struct: $unionName)")
+      line(s"extension (struct: $unionName) {")
       nest {
         model.fields.foreach { case (fieldName, fieldType) =>
           val getterName = getter(fieldName.value)
@@ -78,7 +80,9 @@ def union(model: Def.Union, line: Appender)(using Config)(using
           )
         }
       }
+      line("}")
     end if
   }
+  line("}")
   Exported.Yes(unionName.value)
 end union

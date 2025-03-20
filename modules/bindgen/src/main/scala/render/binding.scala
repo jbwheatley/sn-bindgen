@@ -220,7 +220,7 @@ def renderBinding(
 
   if !multiFileMode && hasAnyTypes then
     val l = to(simpleStream("types"))
-    l("object types:")
+    l("object types {")
     nest {
       val l = to(simpleStream("types"))
       if hasStructs then l(s"export _root_.${packageName}.structs.*")
@@ -228,6 +228,7 @@ def renderBinding(
       if hasUnions then l(s"export _root_.${packageName}.unions.*")
       if hasAnyEnums then l(s"export _root_.${packageName}.enumerations.*")
     }
+    l("}")
   end if
 
   if !multiFileMode then
@@ -252,12 +253,13 @@ private def renderAliases(
     typeImports: TypeImports
 )(using Config, AliasResolver, Context) =
   val exported = List.newBuilder[Exported]
-  if mode == RenderMode.Objects then out.appendLine("object aliases:")
+  if mode == RenderMode.Objects then out.appendLine("object aliases {")
 
   nestIf(mode == RenderMode.Objects) {
     if mode == RenderMode.Objects then typeImports.render(out)
     exported ++= renderAll(aliases, out, alias)
   }
+  if mode == RenderMode.Objects then out.appendLine("}")
   exported.result()
 end renderAliases
 
@@ -270,12 +272,13 @@ private def renderExports(
     case RenderMode.Objects =>
       if exports.nonEmpty then
         out.emptyLine
-        to(out)("object all:")
+        to(out)("object all {")
         nest {
           exports.distinct.foreach { (scope, name) =>
             to(out)(s"export _root_.$packageName.$scope.$name")
           }
         }
+        to(out)("}")
     case RenderMode.Files =>
       exports.distinct.foreach { (scope, name) =>
         to(out)(s"export _root_.$packageName.$scope.$name")
@@ -291,12 +294,13 @@ private def renderUnions(
 )(using Config, AliasResolver, Context) =
   val exported = List.newBuilder[Exported]
 
-  if mode == RenderMode.Objects then out.appendLine("object unions:")
+  if mode == RenderMode.Objects then out.appendLine("object unions {")
 
   nestIf(mode == RenderMode.Objects) {
     if mode == RenderMode.Objects then typeImports.render(out)
     exported ++= renderAll(unions, out, union)
   }
+  if mode == RenderMode.Objects then out.appendLine("}")
   exported.result()
 end renderUnions
 
@@ -307,12 +311,13 @@ private def renderStructs(
     typeImports: TypeImports
 )(using Config, AliasResolver, Context) =
   val exported = List.newBuilder[Exported]
-  if mode == RenderMode.Objects then out.appendLine("object structs:")
+  if mode == RenderMode.Objects then out.appendLine("object structs {")
 
   nestIf(mode == RenderMode.Objects) {
     if mode == RenderMode.Objects then typeImports.render(out)
     exported ++= renderAll(structs, out, struct)
   }
+  if mode == RenderMode.Objects then out.appendLine("}")
   exported.result()
 end renderStructs
 
@@ -322,10 +327,11 @@ private def renderConstants(
     mode: RenderMode
 )(using Config, AliasResolver) =
   if enums.nonEmpty then
-    if mode == RenderMode.Objects then to(out)("object constants:")
+    if mode == RenderMode.Objects then to(out)("object constants {")
     nestIf(mode == RenderMode.Objects) {
       constants(Constants(enums), to(out))
     }
+    if mode == RenderMode.Objects then to(out)("}")
 
 private def renderAll[A <: (Def | GeneratedFunction)](
     defs: Seq[A],
@@ -393,16 +399,17 @@ private def enumPredef(
   val traitName = enumBaseTraitName(intType)
 
   lb.appendLine(
-    s"private[${safePackageName}] trait $traitName[T](using eq: T =:= $renderedScalaType):"
+    s"private[${safePackageName}] trait $traitName[T](using eq: T =:= $renderedScalaType) {"
   )
   lb.appendLine(s"  given Tag[T] = Tag.$renderedTagName.asInstanceOf[Tag[T]]")
-  lb.appendLine(s"  extension (inline t: T)")
+  lb.appendLine(s"  extension (inline t: T) {")
   lb.appendLine(s"   inline def value: $renderedScalaType = eq.apply(t)")
   if intType.base == IntegralBase.Int then
     lb.appendLine(s"   inline def int: CInt = eq.apply(t).toInt")
     if intType.sign == SignType.Unsigned then
       lb.appendLine(s"   inline def uint: CUnsignedInt = eq.apply(t)")
-
+  lb.appendLine("  }")
+  lb.appendLine("}")
   lb.result.linesIterator.toList
 end enumPredef
 
@@ -420,14 +427,15 @@ private def renderEnumerations(
   val exported = List.newBuilder[Exported]
 
   if enumBases.nonEmpty then
-    if mode == RenderMode.Objects then out.appendLine("object predef:")
+    if mode == RenderMode.Objects then out.appendLine("object predef {")
     nestIf(mode == RenderMode.Objects) {
       val safePackageName = packageName.split('.').last
       enumBases.foreach: base =>
         enumPredef(safePackageName, base).foreach(to(out))
     }
+    if mode == RenderMode.Objects then out.appendLine("}")
     if mode == RenderMode.Objects then
-      out.appendLine("\n\nobject enumerations:")
+      out.appendLine("\n\nobject enumerations {")
     nestIf(mode == RenderMode.Objects) {
       if mode == RenderMode.Objects then to(out)("import predef.*")
       exported ++= renderAll(
@@ -436,6 +444,7 @@ private def renderEnumerations(
         enumeration
       )
     }
+    if mode == RenderMode.Objects then out.appendLine("}")
   end if
   exported.result()
 end renderEnumerations
@@ -489,7 +498,7 @@ private def renderScalaFunctions(
         nestIf(renderMode == RenderMode.Objects) {
           if renderMode == RenderMode.Objects then
             out.appendLine(
-              s"\n@extern\nprivate[$safePackageName] object extern_functions:"
+              s"\n@extern\nprivate[$safePackageName] object extern_functions {"
             )
             typeImports.render(out)
           else out.appendLine("\n")
@@ -499,12 +508,13 @@ private def renderScalaFunctions(
             out,
             renderFunction(_, _, renderMode)
           )
+          if renderMode == RenderMode.Objects then out.appendLine("}")
         }
       end if
 
       if hasRegularFunctions || hasExternFunctions then
         if renderMode == RenderMode.Objects then
-          out.appendLine(s"\nobject functions:")
+          out.appendLine(s"\nobject functions {")
         nestIf(renderMode == RenderMode.Objects) {
           if renderMode == RenderMode.Objects then typeImports.render(out)
 
@@ -519,6 +529,7 @@ private def renderScalaFunctions(
             renderFunction(_, _, renderMode)
           )
         }
+        if renderMode == RenderMode.Objects then out.appendLine("}")
       end if
     else
       def modified(loc: ExportLocation) =
@@ -539,7 +550,7 @@ private def renderScalaFunctions(
             !isInit
           }
 
-      out.appendLine("trait ExportedFunctions:")
+      out.appendLine("trait ExportedFunctions {")
       nest {
         if renderMode == RenderMode.Objects then typeImports.render(out)
         renderAll(
@@ -548,9 +559,10 @@ private def renderScalaFunctions(
           renderFunction(_, _, renderMode)
         )
       }
+      out.appendLine("}")
 
       if renderMode == RenderMode.Objects then
-        out.appendLine(s"\nobject functions extends ExportedFunctions:")
+        out.appendLine(s"\nobject functions extends ExportedFunctions {")
       nestIf(renderMode == RenderMode.Objects) {
         if renderMode == RenderMode.Objects then typeImports.render(out)
         renderAll(
@@ -561,6 +573,7 @@ private def renderScalaFunctions(
           renderFunction(_, _, renderMode)
         )
       }
+      if renderMode == RenderMode.Objects then out.appendLine("}")
 
     end if
   end if

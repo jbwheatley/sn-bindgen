@@ -14,7 +14,7 @@ def enumeration(model: Def.Enum, line: Appender)(using
 
   renderComment(line, model.meta)
   line(s"opaque type $opaqueType = $underlyingTypeRender")
-  line(s"object $opaqueType extends $traitName[$opaqueType]:")
+  line(s"object $opaqueType extends $traitName[$opaqueType] {")
 
   nest {
     line(s"given _tag: Tag[$opaqueType] = ${scalaTag(numericType)}")
@@ -38,17 +38,19 @@ def enumeration(model: Def.Enum, line: Appender)(using
 
       line(lhs + " = " + rhs)
     }
-    line(s"inline def getName(inline value: $opaqueType): Option[String] =")
+    line(s"inline def getName(inline value: $opaqueType): Option[String] = {")
     nest {
-      line("inline value match")
+      line("inline value match {")
       nest {
         model.values.foreach { case (constName, value) =>
           line(s"""case ${escape(constName)} => Some("${escape(constName)}")""")
         }
         line("case _ => _root_.scala.None")
       }
+      line("}")
     }
-    line(s"extension (a: $opaqueType)")
+    line("}")
+    line(s"extension (a: $opaqueType) {")
     def wrap(exp: String) =
       numericType match
         case CType.NumericIntegral(
@@ -68,7 +70,9 @@ def enumeration(model: Def.Enum, line: Appender)(using
       line(s"inline def |(b: $opaqueType): $opaqueType = ${wrap("a | b")}")
       line(s"inline def is(b: $opaqueType): Boolean = (a & b) == b")
     }
+    line("}")
   }
+  line("}")
 
   Exported.Yes(opaqueType.value)
 end enumeration

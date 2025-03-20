@@ -74,7 +74,7 @@ def renderFunction(
         ) =>
       val hasZone = if a.hasAny then "(using Zone)" else ""
       line(
-        s"def ${f.name}$arglist$hasZone: ${scalaType(f.returnType)} = "
+        s"def ${f.name}$arglist$hasZone: ${scalaType(f.returnType)} = {"
       )
       nest {
         import scala.collection.mutable.Map as MutableMap
@@ -139,6 +139,7 @@ def renderFunction(
         line(s"$to(${delegateCallArgList.map(escape).mkString(", ")})")
         if returnAsWell then line(s"!${return_ptr}")
       }
+      line("}")
 
       Exported.Yes(f.name.value)
   end match

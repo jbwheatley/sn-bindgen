@@ -71,7 +71,7 @@ def struct(struct: Def.Struct, line: Appender)(using
 
   renderComment(line, struct.meta)
   line(s"opaque type $structName = ${scalaType(finalStructType)}")
-  line(s"object ${sanitiseBeforeColon(structName.value)}:")
+  line(s"object ${sanitiseBeforeColon(structName.value)} {")
   nest {
     struct.anonymous.foreach {
       case s: Def.Struct =>
@@ -114,7 +114,7 @@ def struct(struct: Def.Struct, line: Appender)(using
       ignored match
         case None =>
           line(
-            s"def apply(${applyArgList.result.mkString(", ")})(using Zone): Ptr[$structName] = "
+            s"def apply(${applyArgList.result.mkString(", ")})(using Zone): Ptr[$structName] = {"
           )
           nest {
             line(s"val ____ptr = apply()")
@@ -126,13 +126,14 @@ def struct(struct: Def.Struct, line: Appender)(using
             }
             line(s"____ptr")
           }
+          line("}")
         case Some(v) =>
           warning(
             s"Not rendering the constructor for ${structName.value}, as requested by '$v' filter"
           )
       end match
 
-      line(s"extension (struct: $structName)")
+      line(s"extension (struct: $structName) {")
       nest {
         if !structIsOpaque then
           namedFieldsWithIndex.filter(_._1._1.value.nonEmpty).foreach {
@@ -177,8 +178,9 @@ def struct(struct: Def.Struct, line: Appender)(using
         end if
 
       }
+      line("}")
       if structIsOpaque then
-        line("val offsets: Array[Int] = ")
+        line("val offsets: Array[Int] = {")
         nest {
           line(s"val res = Array.ofDim[Int](${namedFieldsWithIndex.length})")
 
@@ -220,6 +222,7 @@ def struct(struct: Def.Struct, line: Appender)(using
           }
           line("res")
         }
+        line("}")
 
         line("end offsets")
       end if
@@ -227,6 +230,7 @@ def struct(struct: Def.Struct, line: Appender)(using
     end if
 
   }
+  line("}")
 
   Exported.Yes(structName.value)
 end struct
